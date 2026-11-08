@@ -263,8 +263,10 @@ async function fetchQ(qq){
     let artist=qq.artist;if(!artist){const hit=ARTISTS.find(([a])=>(p.title+' '+((p.imageinfo&&p.imageinfo[0].extmetadata.Categories||{}).value||'')).includes(a));artist=hit?hit[0]:''}
     const a=normPage(p,artist);if(a&&!qq.artist&&a.year&&a.year>1955)return null;return a}).filter(a=>a&&okShape(a)&&!S.seenT[tkey(a)]);
 }
-async function refill(){
-  if(busy)return;busy=true;let fails=0;
+let refillP=null;
+function refill(){if(!refillP)refillP=doRefill().finally(()=>{refillP=null});return refillP}
+async function doRefill(){
+  busy=true;let fails=0;
   try{let tries=0;
     while(S.queue.length<8&&tries<6){tries++;
       const qq=queryFor();let got=[];
@@ -291,8 +293,9 @@ function colourOf(img){
 }
 
 async function show(){
-  if(!S.queue.length){$('card').style.display='none';$('msg').style.display='block';$('msg').textContent='Finding paintings…';await refill()}
-  if(!S.queue.length)return;
+  if(!S.queue.length){$('card').style.display='none';$('msg').style.display='block';$('msg').textContent='Finding paintings…';await refill();if(!S.queue.length)await refill()}
+  if(current)return;
+  if(!S.queue.length){$('msg').textContent='Couldn\'t find more paintings. Check your connection and reload.';return}
   current=S.queue.shift();save();
   const a=current,img=$('img');
   img.crossOrigin='anonymous';
@@ -300,6 +303,8 @@ async function show(){
     $('msg').style.display='none';$('card').style.display='block';resetCard()};
   img.onerror=()=>{if(img.crossOrigin){img.removeAttribute('crossorigin');img.crossOrigin=null;img.src=a.web+'&nc=1'}else{S.seen[a.id]=1;current=null;show()}};
   img.src=a.web;img.alt=a.title||'';
+  if(img.complete&&img.naturalWidth&&img.src===a.web)img.onload();
+  setTimeout(()=>{if(a===current&&$('card').style.display==='none'){S.seen[a.id]=1;current=null;show()}},12000);
   const tags=[a.move,a.year,...(a.subj||[]).slice(0,2)].filter(Boolean).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
   $('meta').innerHTML=`<div class="t">${esc(a.title)}</div><div class="s">${esc(a.artist||'Unknown artist')}</div><div class="tags">${tags}</div>`;
   if(S.queue[0]){const p=new Image();p.crossOrigin='anonymous';p.src=S.queue[0].web}
@@ -316,7 +321,7 @@ function renderWhy(){
   const set=lastRated.r>0?WHY_YES:WHY_NO;
   box.innerHTML=`<span class="lbl">${lastRated.r>0?'What did you like?':'What put you off?'}</span>`+set.map(([l],i)=>`<button class="chip${lastRated.used.has(i)?' on':''}" data-i="${i}">${l}</button>`).join('');
   box.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{const i=+b.dataset.i;if(lastRated.used.has(i))return;lastRated.used.add(i);
-    const sign=lastRated.r>0?1:-1;for(const f of set[i][1](lastRated.a))S.adj[f]=(S.adj[f]||0)+sign*1.5;save();b.classList.add('on');S.queue=[];refill()});
+    const sign=lastRated.r>0?1:-1;for(const f of set[i][1](lastRated.a))S.adj[f]=(S.adj[f]||0)+sign*1.5;save();b.classList.add('on');S.queue=[];refill().then(()=>{if(!current)show()})});
 }
 function rate(r){
   if(!current)return;const a=current;S.items[a.id]=a;S.ratings[a.id]=r;S.seen[a.id]=1;S.seenT[tkey(a)]=1;save();
@@ -328,10 +333,10 @@ function rate(r){
 function resetCard(){const c=$('card');c.style.transition='none';c.style.transform='';c.style.opacity=1;['stNo','stYes','stLove'].forEach(i=>$(i).style.opacity=0);requestAnimationFrame(()=>c.style.transition='')}
 
 function renderTerms(){$('terms').innerHTML=S.terms.map((t,i)=>`<span class="term ${t.dir>0?'more':'less'}" data-i="${i}" title="Tap to remove">${t.dir>0?'+':'−'} ${esc(t.q)} ×</span>`).join('');
-  $('terms').querySelectorAll('.term').forEach(e=>e.onclick=()=>{S.terms.splice(+e.dataset.i,1);save();renderTerms();S.queue=[];refill()})}
+  $('terms').querySelectorAll('.term').forEach(e=>e.onclick=()=>{S.terms.splice(+e.dataset.i,1);save();renderTerms();S.queue=[];refill().then(()=>{if(!current)show()})})}
 function addTerm(dir){const q=$('steerIn').value.trim();if(!q){toast('Type something first');return}
   S.terms=S.terms.filter(t=>t.q.toLowerCase()!==q.toLowerCase());S.terms.push({q,dir});$('steerIn').value='';save();renderTerms();
-  S.queue=S.queue.filter(a=>termScore(a)>=0);toast(dir>0?`Showing more “${q}”`:`Showing less “${q}”`);refill()}
+  S.queue=S.queue.filter(a=>termScore(a)>=0);toast(dir>0?`Showing more “${q}”`:`Showing less “${q}”`);refill().then(()=>{if(!current)show()})}
 $('steerMore').onclick=()=>addTerm(1);$('steerLess').onclick=()=>addTerm(-1);
 $('steer').addEventListener('submit',e=>{e.preventDefault();addTerm(1)});
 
