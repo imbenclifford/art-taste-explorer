@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Art taste explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#141210;--panel:#1d1a17;--line:#2e2a25;--text:#efe9df;--muted:#a59c8f;--accent:#d9a55b;--no:#c4604f;--yes:#6fa86b;--love:#d9a55b}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);gap:12px;flex-wrap:wrap}
+h1{font-family:Fraunces,serif;font-weight:600;font-size:20px;margin:0}
+nav{display:flex;gap:4px}
+nav button{background:none;border:1px solid transparent;color:var(--muted);padding:7px 12px;border-radius:999px;font:inherit;font-size:14px;cursor:pointer}
+nav button.on{color:var(--text);border-color:var(--line);background:var(--panel)}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.view{display:none}.view.on{display:block}
+#stage{position:relative;height:min(62vh,620px);display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none}
+#card{position:relative;max-width:100%;max-height:100%;transition:transform .25s ease,opacity .25s ease;will-change:transform}
+#card img{display:block;max-width:100%;max-height:min(62vh,620px);border-radius:4px;box-shadow:0 20px 50px rgba(0,0,0,.5);pointer-events:none}
+.stamp{position:absolute;top:16px;padding:6px 12px;border:3px solid;border-radius:6px;font-weight:500;font-size:20px;letter-spacing:.05em;opacity:0;text-transform:uppercase;background:rgba(0,0,0,.35)}
+#stNo{right:16px;color:var(--no);border-color:var(--no);transform:rotate(12deg)}
+#stYes{left:16px;color:var(--yes);border-color:var(--yes);transform:rotate(-12deg)}
+#stLove{left:50%;transform:translateX(-50%);color:var(--love);border-color:var(--love)}
+#meta{text-align:center;margin:14px auto 4px;max-width:720px;min-height:56px}
+#meta .t{font-family:Fraunces,serif;font-size:19px}
+#meta .s{color:var(--muted);font-size:14px;margin-top:3px}
+#meta .tags{margin-top:6px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.tag{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+.controls{display:flex;justify-content:center;gap:14px;margin:14px 0 6px}
+.controls button{width:62px;height:62px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.controls button small{display:none}
+#bNo{color:var(--no)}#bYes{color:var(--yes)}#bLove{color:var(--love)}#bSkip{color:var(--muted);width:48px;height:48px;font-size:18px;align-self:center}
+.hint{text-align:center;color:var(--muted);font-size:13px}
+.status{display:flex;justify-content:center;gap:16px;color:var(--muted);font-size:13px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.status label{display:flex;gap:6px;align-items:center;cursor:pointer}
+#msg{color:var(--muted);text-align:center;padding:40px 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.fav{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.fav img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#000}
+.fav .b{padding:10px 12px;font-size:13px}
+.fav .b .t{font-family:Fraunces,serif;font-size:15px;margin-bottom:2px}
+.fav .b .s{color:var(--muted)}
+.fav .links{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap}
+a{color:var(--accent)}
+.love-badge{color:var(--love);font-size:12px}
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+.sec h2{font-family:Fraunces,serif;font-weight:400;font-size:18px;margin:0 0 12px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) 110px 34px;gap:10px;align-items:center;font-size:14px;margin:5px 0}
+.bar .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .track{height:8px;background:#2a2622;border-radius:4px;position:relative;overflow:hidden}
+.bar .fill{position:absolute;top:0;bottom:0;border-radius:4px}
+.bar .v{color:var(--muted);font-size:12px;text-align:right}
+#summary{font-family:Fraunces,serif;font-size:18px;line-height:1.55}
+.btn{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:8px 14px;border-radius:8px;font:inherit;font-size:14px;cursor:pointer}
+.btn.danger{color:var(--no)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.sw{width:30px;height:30px;border-radius:4px;border:1px solid var(--line)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.muted{color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Art taste explorer</h1>
+  <nav>
+    <button data-v="swipe" class="on">Swipe</button>
+    <button data-v="taste">Your taste</button>
+    <button data-v="favs">Favourites <span id="favCount"></span></button>
+  </nav>
+</header>
+<main>
+  <section id="swipe" class="view on">
+    <div id="stage">
+      <div id="msg">Loading artworks from the Cleveland Museum of Art…</div>
+      <div id="card" style="display:none">
+        <img id="img" alt="">
+        <div class="stamp" id="stNo">Nope</div>
+        <div class="stamp" id="stYes">Like</div>
+        <div class="stamp" id="stLove">Love</div>
+      </div>
+    </div>
+    <div id="meta"></div>
+    <div class="controls">
+      <button id="bNo" title="Nope (left arrow)" aria-label="Nope">✕</button>
+      <button id="bSkip" title="Skip / no opinion (down arrow)" aria-label="Skip">↓</button>
+      <button id="bLove" title="Love (up arrow)" aria-label="Love">★</button>
+      <button id="bYes" title="Like (right arrow)" aria-label="Like">♥</button>
+    </div>
+    <div class="hint">Swipe left / right, up to love, down to skip. Or use arrow keys.</div>
+    <div class="status">
+      <span id="phase"></span>
+      <label><input type="checkbox" id="frameOnly" checked> Landscape only (fits the Frame)</label>
+    </div>
+  </section>
+
+  <section id="taste" class="view">
+    <div class="sec">
+      <h2>In a sentence</h2>
+      <div id="summary" class="muted">Rate about 20 pieces and a profile will appear here.</div>
+    </div>
+    <div class="cols" id="bars"></div>
+    <div class="sec">
+      <h2>Colours you're drawn to</h2>
+      <div class="swatches" id="swatches"></div>
+      <p class="muted" id="colourNote"></p>
+    </div>
+    <div class="sec">
+      <h2>Take it further</h2>
+      <p class="muted">Copy your profile and paste it to Claude to get a written read of your taste and pointers to similar free works at the National Gallery of Art, the Met and the Rijksmuseum.</p>
+      <div class="row">
+        <button class="btn" id="copyProfile">Copy profile</button>
+        <button class="btn danger" id="reset">Reset everything</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="favs" class="view">
+    <p class="muted">"Print-quality image" opens a ~3400px JPEG straight from the Cleveland Museum of Art (free, CC0). On a Mac, right-click it and choose "Save image as", then add it via the SmartThings app on your phone.</p>
+    <div class="grid" id="favGrid"></div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+(()=>{
+const API='https://openaccess-api.clevelandart.org/api/artworks/';
+const SEEDS=[
+ ['French Impressionism',{q:'impressionist',type:'Painting'}],
+ ['Modern European painting 1860–1930',{department:'Modern European Painting and Sculpture',type:'Painting'}],
+ ['Old Master European painting',{department:'European Painting and Sculpture',type:'Painting'}],
+ ['Dutch Golden Age',{q:'Dutch',type:'Painting',created_after:1580,created_before:1720}],
+ ['Italian Renaissance',{q:'Italian',type:'Painting',created_after:1350,created_before:1600}],
+ ['Rococo and 18th century',{department:'European Painting and Sculpture',type:'Painting',created_after:1720,created_before:1800}],
+ ['Romantic landscape',{q:'landscape',type:'Painting',created_after:1780,created_before:1870}],
+ ['American painting',{department:'American Painting and Sculpture',type:'Painting'}],
+ ['Japanese woodblock prints',{department:'Japanese Art',type:'Print'}],
+ ['Japanese painting and screens',{department:'Japanese Art',type:'Painting'}],
+ ['Chinese ink and silk painting',{department:'Chinese Art',type:'Painting'}],
+ ['Indian and Persian painting',{department:'Indian and Southeast Asian Art',type:'Painting'}],
+ ['Watercolours and drawings',{department:'Drawings',type:'Drawing'}],
+ ['Etchings and engravings',{department:'Prints',type:'Print'}],
+ ['Early photography',{type:'Photograph'}],
+ ['Textiles and pattern',{type:'Textile'}],
+ ['Museum highlights',{highlight:1,type:'Painting'}],
+ ['Snow and winter',{q:'snow'}],
+ ['Night and moonlight',{q:'moonlight'}],
+ ['The sea',{q:'sea',type:'Painting'}],
+ ['Rivers and lakes',{q:'river'}],
+ ['Mountains',{q:'mountains'}],
+ ['Gardens and flowers',{q:'flowers',type:'Painting'}],
+ ['Still life',{q:'still life'}],
+ ['City and street life',{q:'street'}],
+ ['Birds and animals',{q:'birds'}],
+ ['Interiors',{q:'interior',type:'Painting'}],
+ ['Portraits',{q:'portrait',type:'Painting'}]
+];
+const SEEDMAP=Object.fromEntries(SEEDS);
+const PICTORIAL=new Set(['Painting','Drawing','Print','Photograph','Textile','Miniature','Manuscript','Album Leaf','Calligraphy']);
+
+let S=load()||fresh(true);
+function fresh(fo){return {v:2,ratings:{},items:{},queue:[],seen:{},seenT:{},qinfo:{},frameOnly:fo}}
+if(S.v!==2)S=fresh(true);
+S.seenT=S.seenT||{};
+const tkey=a=>(a.title||'')+'|'+(a.artist||'');
+let current=null,busy=false;
+function save(){try{localStorage.setItem('artTasteCMA',JSON.stringify(S))}catch(e){}}
+function load(){try{return JSON.parse(localStorage.getItem('artTasteCMA'))}catch(e){return null}}
+const $=id=>document.getElementById(id);
+function toast(t){const e=$('toast');e.textContent=t;e.style.opacity=1;clearTimeout(e._t);e._t=setTimeout(()=>e.style.opacity=0,1600)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+const TECH=[['oil','Oil'],['watercolor','Watercolour'],['woodblock','Woodblock'],['ink','Ink'],['etching','Etching'],['engraving','Engraving'],['lithograph','Lithograph'],['pastel','Pastel'],['silk','On silk'],['gouache','Gouache'],['tempera','Tempera'],['albumen','Albumen print'],['gelatin silver','Gelatin silver print'],['chalk','Chalk'],['charcoal','Charcoal'],['gold','Gold']];
+function norm(d,seed){
+  const c=(d.creators||[])[0];const artistFull=c?c.description:'';
+  const artist=artistFull?artistFull.split(' (')[0]:'';
+  const w=d.images&&d.images.web;
+  const tech=(d.technique||'').toLowerCase();
+  return {id:d.id,title:d.title,artist,artistFull,date:d.creation_date,year:d.creation_date_earliest,type:d.type,dept:d.department,
+    culture:(d.culture&&d.culture[0]||'').split(',')[0].trim(),tech:TECH.filter(([k])=>tech.includes(k)).map(([,l])=>l),
+    web:w.url,ww:+w.width,wh:+w.height,print:d.images.print?d.images.print.url:w.url,page:d.url,seed};
+}
+function features(a){
+  const f=[];
+  if(a.seed)f.push('seed:'+a.seed);
+  if(a.dept)f.push('dept:'+a.dept);
+  if(a.type)f.push('type:'+a.type);
+  if(a.artist&&!/^unknown/i.test(a.artist))f.push('artist:'+a.artist);
+  if(a.culture)f.push('culture:'+a.culture);
+  if(a.year!=null){const y=a.year;f.push('era:'+(y<1400?'Before 1400':y<1600?'1400–1599':y<1750?'1600–1749':y<1850?'1750–1849':y<1900?'1850–1899':'1900 onwards'))}
+  (a.tech||[]).forEach(t=>f.push('tech:'+t));
+  if(a.col){const {s,l,h}=a.col;
+    f.push('light:'+(l<38?'Dark and moody':l>62?'Light and airy':'Mid-tone'));
+    f.push('sat:'+(s<18?'Muted, earthy':s>40?'Vivid, saturated':'Moderate colour'));
+    if(h!=null)f.push('hue:'+hueName(h));}
+  return f;
+}
+function hueName(h){return h<15||h>=345?'Reds':h<45?'Oranges and ochres':h<70?'Yellows and golds':h<160?'Greens':h<200?'Teals':h<260?'Blues':h<300?'Purples':'Pinks'}
+
+function weights(){
+  const sum={},n={};
+  for(const id in S.ratings){const r=S.ratings[id];if(r===0)continue;const a=S.items[id];if(!a)continue;
+    for(const f of features(a)){sum[f]=(sum[f]||0)+r;n[f]=(n[f]||0)+1}}
+  const w={};for(const f in sum)w[f]={score:sum[f]/(n[f]+2),n:n[f]};return w;
+}
+function predict(a,w){let s=0;for(const f of features(a))if(w[f])s+=w[f].score;return s}
+function ratedCount(){return Object.values(S.ratings).filter(r=>r!==0).length}
+function okShape(a){if(!S.frameOnly)return true;const r=a.ww/a.wh;return r>=1.2&&r<=2.4}
+
+function queryFor(){
+  const n=ratedCount();
+  if(n<20||Math.random()<0.3){const [l,p]=pick(SEEDS);return {label:l,p}}
+  const w=weights();
+  const good=Object.entries(w).filter(([f,v])=>v.score>0.3&&/^(seed|artist|dept|culture|type):/.test(f)).sort((a,b)=>b[1].score-a[1].score).slice(0,6);
+  if(!good.length){const [l,p]=pick(SEEDS);return {label:l,p}}
+  const [f]=pick(good);const kind=f.split(':')[0],val=f.slice(kind.length+1);
+  if(kind==='seed')return {label:val,p:SEEDMAP[val]};
+  const p=kind==='artist'?{q:val}:kind==='dept'?{department:val}:kind==='culture'?{q:val}:{type:val};
+  if(kind!=='type'&&!p.type&&Math.random()<0.5)p.type='Painting';
+  return {label:kind+':'+val,p,inherit:true};
+}
+async function fetchQ(qq){
+  const key=JSON.stringify(qq.p);const info=S.qinfo[key]||{};
+  const limit=25;let skip=0;
+  if(info.total!=null){if(info.total<=0)return [];skip=Math.max(0,Math.floor(Math.random()*Math.max(1,info.total-limit)))}
+  const params=new URLSearchParams({...qq.p,cc0:1,has_image:1,limit,skip});
+  const r=await fetch(API+'?'+params);if(!r.ok)throw new Error('API '+r.status);
+  const j=await r.json();S.qinfo[key]={total:j.info?j.info.total:0};
+  const seedLabel=qq.inherit?null:qq.label;
+  return (j.data||[]).filter(d=>d.images&&d.images.web&&!S.seen[d.id]&&PICTORIAL.has(d.type)).map(d=>{const a=norm(d,seedLabel);
+    if(!a.seed){const guess=SEEDS.find(([l,p])=>(p.department&&p.department===a.dept&&(!p.type||p.type===a.type)));a.seed=guess?guess[0]:null}
+    return a}).filter(a=>okShape(a)&&!S.seenT[tkey(a)]);
+}
+async function refill(){
+  if(busy)return;busy=true;let fails=0;
+  try{
+    let tries=0;
+    while(S.queue.length<8&&tries<6){tries++;
+      const qq=queryFor();let got=[];
+      try{got=await fetchQ(qq)}catch(e){console.warn(e);fails++;continue}
+      const w=weights(),n=ratedCount();
+      if(n>=20)got.sort((a,b)=>predict(b,w)-predict(a,w));else shuffle(got);
+      for(const a of got.slice(0,n>=20?4:2))if(!S.queue.find(x=>x.id===a.id||tkey(x)===tkey(a)))S.queue.push(a);
+    }
+    if(ratedCount()<20)shuffle(S.queue);save();
+  }finally{busy=false}
+  if(!S.queue.length&&fails){$('msg').textContent='Couldn\'t reach the Cleveland Museum of Art. Check your connection and reload.';$('msg').style.display='block'}
+}
+
+function colourOf(img){
+  try{const c=document.createElement('canvas');c.width=c.height=48;const x=c.getContext('2d');x.drawImage(img,0,0,48,48);
+    const d=x.getImageData(0,0,48,48).data;let S2=0,L=0,n=0;const hb=new Array(12).fill(0);
+    for(let i=0;i<d.length;i+=4){const r=d[i]/255,g=d[i+1]/255,b=d[i+2]/255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2;let s=0,h=0;
+      if(mx!==mn){const dd=mx-mn;s=l>.5?dd/(2-mx-mn):dd/(mx+mn);h=mx===r?((g-b)/dd+(g<b?6:0)):mx===g?((b-r)/dd+2):((r-g)/dd+4);h*=60}
+      S2+=s;L+=l;n++;if(s>.15&&l>.1&&l<.9)hb[Math.floor(h/30)%12]+=s}
+    const top=hb.indexOf(Math.max(...hb));const sat=S2/n*100,lig=L/n*100;
+    return {h:Math.max(...hb)>n*0.05?top*30+15:null,s:Math.round(sat),l:Math.round(lig)};
+  }catch(e){return null}
+}
+
+async function show(){
+  if(!S.queue.length){$('card').style.display='none';$('msg').style.display='block';$('msg').textContent='Finding artworks…';await refill()}
+  if(!S.queue.length)return;
+  current=S.queue.shift();save();
+  const a=current,img=$('img');
+  img.crossOrigin='anonymous';
+  img.onload=()=>{if(!a.col){const c=colourOf(img);if(c){a.col=c;if(S.items[a.id])save()}}if(a!==current)return;
+    $('msg').style.display='none';$('card').style.display='block';resetCard()};
+  img.onerror=()=>{if(img.crossOrigin){img.removeAttribute('crossorigin');img.crossOrigin=null;img.src=a.web+'?nc'}else{S.seen[a.id]=1;show()}};
+  img.src=a.web;img.alt=a.title||'';
+  const tags=[a.seed,a.type,a.culture].filter(Boolean).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
+  $('meta').innerHTML=`<div class="t">${esc(a.title||'Untitled')}</div><div class="s">${esc(a.artist||'Unknown artist')}${a.date?' · '+esc(a.date):''}</div><div class="tags">${tags}</div>`;
+  if(S.queue[0]){const p=new Image();p.crossOrigin='anonymous';p.src=S.queue[0].web}
+  if(S.queue.length<5)refill();
+  updatePhase();
+}
+function updatePhase(){const n=ratedCount();$('phase').textContent=n<20?`Exploring broadly · ${n}/20 rated`:`Tuning to your taste · ${n} rated`;
+  const f=Object.values(S.ratings).filter(r=>r>0).length;$('favCount').textContent=f?`(${f})`:''}
+
+function rate(r){
+  if(!current)return;const a=current;S.items[a.id]=a;S.ratings[a.id]=r;S.seen[a.id]=1;S.seenT[tkey(a)]=1;save();
+  const card=$('card');const dx=r===-1?-1:r===1?1:0,dy=r===2?-1:r===0?1:0;
+  card.style.transform=`translate(${dx*600}px,${dy*600}px) rotate(${dx*20}deg)`;card.style.opacity=0;
+  current=null;setTimeout(show,220);
+}
+function resetCard(){const c=$('card');c.style.transition='none';c.style.transform='';c.style.opacity=1;['stNo','stYes','stLove'].forEach(i=>$(i).style.opacity=0);requestAnimationFrame(()=>c.style.transition='')}
+
+let sx=0,sy=0,drag=false;const stage=$('stage');
+stage.addEventListener('pointerdown',e=>{if(!current)return;drag=true;sx=e.clientX;sy=e.clientY;$('card').style.transition='none';try{stage.setPointerCapture(e.pointerId)}catch(_){}});
+stage.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-sx,dy=e.clientY-sy;
+  $('card').style.transform=`translate(${dx}px,${dy}px) rotate(${dx/20}deg)`;
+  $('stNo').style.opacity=Math.max(0,-dx/120);$('stYes').style.opacity=Math.max(0,dx/120);$('stLove').style.opacity=Math.abs(dy)>Math.abs(dx)?Math.max(0,-dy/120):0});
+stage.addEventListener('pointerup',e=>{if(!drag)return;drag=false;$('card').style.transition='';const dx=e.clientX-sx,dy=e.clientY-sy;
+  if(Math.abs(dx)>100&&Math.abs(dx)>Math.abs(dy))rate(dx>0?1:-1);else if(dy<-100)rate(2);else if(dy>100)rate(0);else resetCard()});
+stage.addEventListener('pointercancel',()=>{drag=false;resetCard()});
+$('bNo').onclick=()=>rate(-1);$('bYes').onclick=()=>rate(1);$('bLove').onclick=()=>rate(2);$('bSkip').onclick=()=>rate(0);
+document.addEventListener('keydown',e=>{if(!$('swipe').classList.contains('on'))return;
+  const m={ArrowLeft:-1,ArrowRight:1,ArrowUp:2,ArrowDown:0}[e.key];if(m!==undefined){e.preventDefault();rate(m)}});
+$('frameOnly').checked=S.frameOnly;
+$('frameOnly').onchange=e=>{S.frameOnly=e.target.checked;S.queue=[];save();show()};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id===b.dataset.v));
+  if(b.dataset.v==='taste')renderTaste();if(b.dataset.v==='favs')renderFavs();
+});
+
+const GROUPS=[['seed','Styles and collections'],['artist','Artists'],['culture','Cultures'],['era','Eras'],['type','Media'],['tech','Techniques'],['dept','Museum departments'],['light','Light'],['sat','Colour intensity'],['hue','Dominant hues']];
+const val=f=>f.slice(f.indexOf(':')+1);
+function renderTaste(){
+  const w=weights(),n=ratedCount();const box=$('bars');box.innerHTML='';
+  for(const [g,label] of GROUPS){
+    const rows=Object.entries(w).filter(([f,v])=>f.startsWith(g+':')&&v.n>=(g==='artist'?1:2)).sort((a,b)=>b[1].score-a[1].score);
+    if(!rows.length)continue;
+    const sh=rows.length>8?[...rows.slice(0,5),...rows.slice(-3)]:rows;const max=Math.max(...rows.map(r=>Math.abs(r[1].score)),0.5);
+    const d=document.createElement('div');d.className='sec';
+    d.innerHTML=`<h2>${label}</h2>`+sh.map(([f,v])=>{const p=Math.abs(v.score)/max*50,pos=v.score>=0;
+      return `<div class="bar"><div class="n" title="${esc(val(f))}">${esc(val(f))}</div><div class="track"><div class="fill" style="${pos?'left:50%':'right:50%'};width:${p}%;background:${pos?'var(--yes)':'var(--no)'}"></div><div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:#4a443d"></div></div><div class="v">${v.n}</div></div>`}).join('');
+    box.appendChild(d);
+  }
+  const liked=Object.entries(S.ratings).filter(([,r])=>r>0).map(([id])=>S.items[id]).filter(a=>a&&a.col);
+  $('swatches').innerHTML=liked.slice(-40).map(a=>`<div class="sw" title="${esc(a.title)}" style="background:hsl(${a.col.h==null?30:a.col.h},${a.col.s}%,${a.col.l}%)"></div>`).join('');
+  $('colourNote').textContent=liked.length?'Overall colour of each piece you liked or loved.':'';
+  $('summary').textContent=n<15?`Rate about 20 pieces and a profile will appear here (${n} so far).`:sentence(w);
+  $('summary').classList.toggle('muted',n<15);
+}
+function topF(w,g,k=2,sign=1){return Object.entries(w).filter(([f,v])=>f.startsWith(g+':')&&v.n>=2&&v.score*sign>0.25).sort((a,b)=>sign*(b[1].score-a[1].score)).slice(0,k).map(([f])=>val(f))}
+function list(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1]}
+function sentence(w){
+  const st=topF(w,'seed',3),cu=topF(w,'culture',1),li=topF(w,'light',1),sa=topF(w,'sat',1),hu=topF(w,'hue',2),er=topF(w,'era',1),no=topF(w,'seed',2,-1);
+  let s='You seem drawn to '+(st.length?list(st.map(x=>x.toLowerCase())):'a broad mix');
+  if(li.length||sa.length)s+=` — ${[li[0],sa[0]].filter(Boolean).join(', ').toLowerCase()}`;
+  if(hu.length)s+=`, leaning toward ${list(hu.map(x=>x.toLowerCase()))}`;
+  if(er.length)s+=`, especially work from ${er[0].toLowerCase()}`;
+  if(cu.length)s+=` (${cu[0]} comes up a lot)`;
+  s+='.';if(no.length)s+=` Less keen on ${list(no.map(x=>x.toLowerCase()))}.`;return s;
+}
+$('copyProfile').onclick=async()=>{
+  const w=weights();
+  const groups=GROUPS.map(([k])=>[k,Object.entries(w).filter(([f,v])=>f.startsWith(k+':')&&v.n>=2).sort((a,b)=>b[1].score-a[1].score).map(([f,v])=>`${val(f)} (${v.score.toFixed(2)}, n=${v.n})`)]).filter(([,v])=>v.length);
+  const fav=Object.entries(S.ratings).filter(([,r])=>r>0).map(([id,r])=>{const a=S.items[id];return `${r===2?'LOVE':'like'}: ${a.title} — ${a.artist||'?'}, ${a.date||''} [${a.seed||a.dept||''}]`});
+  const nope=Object.entries(S.ratings).filter(([,r])=>r<0).map(([id])=>{const a=S.items[id];return `${a.title} — ${a.artist||'?'} [${a.seed||a.dept||''}]`});
+  const txt=`My art taste profile (from the swipe tool):\n\n${sentence(w)}\n\nFeature scores (positive = liked):\n${groups.map(([k,v])=>`${k}: ${v.slice(0,8).join('; ')}`).join('\n')}\n\nLiked/loved:\n${fav.join('\n')}\n\nRejected:\n${nope.slice(-40).join('\n')}`;
+  try{await navigator.clipboard.writeText(txt);toast('Profile copied')}catch(e){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Profile copied')}catch(_){toast('Copy failed')}ta.remove()}
+};
+let armed=false;
+$('reset').onclick=()=>{if(!armed){armed=true;$('reset').textContent='Tap again to confirm';setTimeout(()=>{armed=false;$('reset').textContent='Reset everything'},3000);return}
+  S=fresh(S.frameOnly);save();armed=false;$('reset').textContent='Reset everything';renderTaste();updatePhase();current=null;show();toast('Reset')};
+function renderFavs(){
+  const favs=Object.entries(S.ratings).filter(([,r])=>r>0).sort((a,b)=>b[1]-a[1]).map(([id,r])=>({...S.items[id],r}));
+  $('favGrid').innerHTML=favs.length?favs.map(a=>`<div class="fav"><img loading="lazy" src="${esc(a.web)}" alt=""><div class="b">${a.r===2?'<div class="love-badge">★ Loved</div>':''}<div class="t">${esc(a.title)}</div><div class="s">${esc(a.artist||'Unknown')}${a.date?' · '+esc(a.date):''}</div><div class="links"><a href="${esc(a.print)}" target="_blank" rel="noopener">Print-quality image</a><a href="${esc(a.page)}" target="_blank" rel="noopener">Museum page</a></div></div></div>`).join(''):'<p class="muted">Nothing yet. Swipe right on things you like.</p>';
+}
+updatePhase();show();
+})();
+</script>
+</body>
+</html>
