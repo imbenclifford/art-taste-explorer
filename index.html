@@ -155,7 +155,7 @@ const ARTISTS=[
 ];
 const MOVE=Object.fromEntries(ARTISTS);
 const SUBJ=[
- ['People',/portrait|woman|women|girl|boy|\bman\b|\bmen\b|lady|ladies|child|family|bather|dancer|figure|people|couple|mother|nude|café|cafe|promenade|lover|femme|fille|homme|enfant|dame|frau|mädchen|madchen|mujer|niñ|kinder|selbstbildnis|autoportrait|odalisque|baigneu|danse|tänzer|circus|cirque|moulin|actress|singer|reading|lecture/i],
+ ['People',/portrait|woman|women|girl|boy|\bman\b|\bmen\b|lady|ladies|child|family|bather|dancer|figure|people|couple|mother|nude|café|cafe|promenade|lover|femme|fille|homme|enfant|dame|frau|mädchen|madchen|mujer|niñ|kinder|selbstbildnis|autoportrait|odalisque|baigneu|danse|tänzer|circus|cirque|moulin|actress|singer|reading|lecture|\bakt\b|nymph|player|joueur|spieler|musician|bohem|tango|dimanche|sunday|grande jatte|picnic|déjeuner|bal\b|ball\b|party|mädchen|bildnis|retrato|ritratto|tahitian|bather|worker|peasant|paysan|harvest/i],
  ['Landscape',/landscape|paysage|landschaft|seascape|harbou?r|\bport\b|river|forest|mountain|valley|coast|view of|vue de|countryside|field|meadow|hills?\b|lake\b|village/i],
  ['Beach and sea',/beach|plage|playa|strand|\bsea\b|\bmer\b|\bmar\b|sailing|boats?|bateaux|bathing/i],
  ['Interior',/interior|intérieur|interieur|\broom\b|salon|chambre|dining|table\b/i],
@@ -171,6 +171,8 @@ let S=load()||fresh(true);
 function fresh(fo){return {v:3,ratings:{},items:{},queue:[],seen:{},qinfo:{},adj:{},terms:[],frameOnly:fo}}
 if(S.v!==3)S=fresh(true);
 let current=null,busy=false,lastRated=null;
+S.seenT=S.seenT||{};
+const tkey=a=>(a.artist||'')+'|'+(a.title||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\b(study for|sketch for|\d{4})\b/g,'').trim().slice(0,40);
 function save(){try{localStorage.setItem('artTasteV3',JSON.stringify(S))}catch(e){}}
 function load(){try{return JSON.parse(localStorage.getItem('artTasteV3'))}catch(e){return null}}
 const $=id=>document.getElementById(id);
@@ -181,7 +183,10 @@ function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random
 function strip(html){const d=document.createElement('div');d.innerHTML=html||'';return (d.textContent||'').trim()}
 
 function cleanTitle(name,artist){
-  let t=strip(name).replace(/\.(jpe?g|png|tiff?|webp)$/i,'').replace(/^File:/,'');
+  let raw=strip(name);const en=raw.match(/label QS:Len,"([^"]+)"/);
+  if(en)raw=en[1];else raw=raw.split(/\s*(?:title|label) QS:/)[0];
+  raw=raw.replace(/^(French|German|Swedish|Spanish|Danish|Norwegian|Dutch|Italian|Catalan|Russian|English|Polish|Czech|Finnish):\s*/i,'');
+  let t=raw.replace(/\.(jpe?g|png|tiff?|webp)$/i,'').replace(/^File:/,'');
   t=t.replace(/\s*[-–]\s*Google (Art Project|Cultural Institute)/gi,'').replace(/^\([^)]*\)\s*-\s*/,'').replace(/_/g,' ');
   if(artist){const parts=artist.split(' ');const last=parts[parts.length-1];
     t=t.replace(new RegExp('^\\s*('+artist.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'|'+last+')\\s*[-–,:]\\s*','i'),'').replace(new RegExp('\\s*[-–,]\\s*('+artist.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')\\s*$','i'),'')}
@@ -256,7 +261,7 @@ async function fetchQ(qq){
   if(!j.query||!j.query.pages)return [];
   return Object.values(j.query.pages).filter(p=>!S.seen[p.pageid]).map(p=>{
     let artist=qq.artist;if(!artist){const hit=ARTISTS.find(([a])=>(p.title+' '+((p.imageinfo&&p.imageinfo[0].extmetadata.Categories||{}).value||'')).includes(a));artist=hit?hit[0]:''}
-    const a=normPage(p,artist);if(a&&!qq.artist&&a.year&&a.year>1955)return null;return a}).filter(a=>a&&okShape(a));
+    const a=normPage(p,artist);if(a&&!qq.artist&&a.year&&a.year>1955)return null;return a}).filter(a=>a&&okShape(a)&&!S.seenT[tkey(a)]);
 }
 async function refill(){
   if(busy)return;busy=true;let fails=0;
@@ -266,7 +271,7 @@ async function refill(){
       try{got=await fetchQ(qq)}catch(e){console.warn(e);fails++;continue}
       const w=weights();got.sort((a,b)=>predict(b,w)-predict(a,w));
       const take=ratedCount()<15?got.slice(0,6).sort(()=>Math.random()-.5).slice(0,2):got.slice(0,3);
-      for(const a of take)if(!S.queue.find(x=>x.id===a.id||x.title===a.title&&x.artist===a.artist))S.queue.push(a);
+      for(const a of take)if(!S.queue.find(x=>x.id===a.id||tkey(x)===tkey(a))&&!(current&&tkey(current)===tkey(a)))S.queue.push(a);
     }
     if(ratedCount()<15)shuffle(S.queue);else{const w=weights();S.queue.sort((a,b)=>predict(b,w)-predict(a,w))}
     save();
@@ -314,7 +319,7 @@ function renderWhy(){
     const sign=lastRated.r>0?1:-1;for(const f of set[i][1](lastRated.a))S.adj[f]=(S.adj[f]||0)+sign*1.5;save();b.classList.add('on');S.queue=[];refill()});
 }
 function rate(r){
-  if(!current)return;const a=current;S.items[a.id]=a;S.ratings[a.id]=r;S.seen[a.id]=1;save();
+  if(!current)return;const a=current;S.items[a.id]=a;S.ratings[a.id]=r;S.seen[a.id]=1;S.seenT[tkey(a)]=1;save();
   lastRated={a,r,used:new Set()};renderWhy();
   const card=$('card');const dx=r===-1?-1:r===1?1:0,dy=r===2?-1:r===0?1:0;
   card.style.transform=`translate(${dx*600}px,${dy*600}px) rotate(${dx*20}deg)`;card.style.opacity=0;
@@ -371,7 +376,7 @@ function renderTaste(){
 function topF(w,g,k=2,sign=1){return Object.entries(w).filter(([f,v])=>f.startsWith(g+':')&&v.n>=2&&v.score*sign>0.25).sort((a,b)=>sign*(b[1].score-a[1].score)).slice(0,k).map(([f])=>val(f))}
 function list(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1]}
 function sentence(w){
-  const mv=topF(w,'move',2),ar=topF(w,'artist',3),sb=topF(w,'subj',2),tp=topF(w,'temp',1),li=topF(w,'light',1),sa=topF(w,'sat',1),no=[...topF(w,'move',1,-1),...topF(w,'subj',1,-1)];
+  const mv=topF(w,'move',2),ar=topF(w,'artist',3),sb=topF(w,'subj',3).filter(x=>x!=='Other').slice(0,2),tp=topF(w,'temp',1),li=topF(w,'light',1),sa=topF(w,'sat',1),no=[...topF(w,'move',1,-1),...topF(w,'subj',2,-1).filter(x=>x!=='Other').slice(0,1)];
   let s='You seem drawn to '+(mv.length?list(mv):'a broad mix');
   if(sb.length)s+=`, especially ${list(sb.map(x=>x.toLowerCase()))}`;
   const c=[tp[0],li[0],sa[0]].filter(Boolean);if(c.length)s+=` — ${c.join(', ').toLowerCase()}`;
