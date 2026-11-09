@@ -169,7 +169,7 @@ const SUBJ=[
  ['Animals',/horse|cow|cat\b|dog\b|deer|tiger|bird|fox|animal|pferd|tiere/i],
  ['City',/street|rue\b|boulevard|city|paris|bridge|pont\b|quai|town/i]
 ];
-const JUNK=/detail|signature|frame\b|museum|exhibition|installation|gallery view|room view|stamp|postage|grave|tomb|photograph of|sketchbook|reverse|verso|x-ray|infrared|\bmap\b/i;
+const JUNK=/musée|musee|paris musées|\d{10,}|au musée|exposition|wikimedia|\(\d{10}\)|detail|signature|frame\b|museum|exhibition|installation|gallery view|room view|stamp|postage|grave|tomb|photograph of|sketchbook|reverse|verso|x-ray|infrared|\bmap\b/i;
 const PEOPLE_PRIOR=0.35;
 
 let S=load()||fresh(true);
@@ -197,6 +197,7 @@ function cleanTitle(name,artist){
   if(artist){const parts=artist.split(' ');const last=parts[parts.length-1];
     t=t.replace(new RegExp('^\\s*('+artist.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'|'+last+')\\s*[-–,:]\\s*','i'),'').replace(new RegExp('\\s*[-–,]\\s*('+artist.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')\\s*$','i'),'')}
   t=t.replace(/\s*[-–]\s*(WGA\d+|\w+ \d{3,}|[A-Z]{2,}[\w.-]*\d+)$/,'').trim();
+  if(/^(MET|NGA|LACMA|DP|JIB|WPA|IMG|DSC)?[\s_-]*[A-Z]*\d[\w\s.-]*$/i.test(t)||/^\w{1,6}\s?\d+$/.test(t))t='';
   return t||'Untitled';
 }
 function normPage(p,artist){
