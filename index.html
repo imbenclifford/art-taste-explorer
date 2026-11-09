@@ -102,11 +102,12 @@ a{color:var(--accent)}
     </div>
     <div id="why"></div>
     <div class="hint">Swipe left / right, up to love, down to skip. Or use arrow keys.</div>
-    <form id="steer"><input id="steerIn" placeholder="Steer it: dancers, Matisse, cafés, bold blue…" autocomplete="off"><button class="btn" type="button" id="steerMore">More</button><button class="btn" type="button" id="steerLess">Less</button></form>
+    <form id="steer"><input id="steerIn" placeholder="Steer it: Klee, Hiroshige, jungle, circus…" autocomplete="off"><button class="btn" type="button" id="steerMore">More</button><button class="btn" type="button" id="steerLess">Less</button></form>
     <div id="terms"></div>
     <div class="status">
       <span id="phase"></span>
       <label><input type="checkbox" id="frameOnly" checked> Landscape only (fits the Frame)</label>
+      <label><input type="checkbox" id="brightOnly" checked> Bright only</label>
     </div>
   </section>
 
@@ -141,19 +142,23 @@ a{color:var(--accent)}
 <script>
 (()=>{
 const API='https://commons.wikimedia.org/w/api.php';
+const P=a=>`deepcat:"Paintings by ${a}" filetype:bitmap`;
 const ARTISTS=[
- ['Pierre Bonnard','Nabis and intimism'],['Édouard Vuillard','Nabis and intimism'],['Félix Vallotton','Nabis and intimism'],['Maurice Denis','Nabis and intimism'],
- ['Henri Matisse','Fauvism'],['André Derain','Fauvism'],['Raoul Dufy','Fauvism'],['Albert Marquet','Fauvism'],['Henri Manguin','Fauvism'],
- ['August Macke','German Expressionism'],['Franz Marc','German Expressionism'],['Ernst Ludwig Kirchner','German Expressionism'],['Max Pechstein','German Expressionism'],['Alexej von Jawlensky','German Expressionism'],['Paula Modersohn-Becker','German Expressionism'],
- ['Wassily Kandinsky','Early abstraction'],['Paul Klee','Early abstraction'],['Hilma af Klint','Early abstraction'],['Robert Delaunay','Early abstraction'],['Kazimir Malevich','Early abstraction'],
- ['Paul Gauguin','Post-Impressionism'],['Vincent van Gogh','Post-Impressionism'],['Henri Rousseau','Post-Impressionism'],
- ['Paul Signac','Pointillism'],['Henri-Edmond Cross','Pointillism'],['Georges Seurat','Pointillism'],['Théo van Rysselberghe','Pointillism'],
- ['Gustav Klimt','Vienna Secession'],['Egon Schiele','Vienna Secession'],['Koloman Moser','Vienna Secession'],
- ['Amedeo Modigliani','Modern figure painting'],['Amrita Sher-Gil','Modern figure painting'],['Fernand Léger','Modern figure painting'],['Edvard Munch','Modern figure painting'],
- ['Joaquín Sorolla','Sunlight and people'],['Peder Severin Krøyer','Sunlight and people'],['Carl Larsson','Sunlight and people'],['Anders Zorn','Sunlight and people'],['Mary Cassatt','Sunlight and people'],
- ['Henri de Toulouse-Lautrec','Posters and nightlife']
+ ['Henri Rousseau','Naïve and decorative',P('Henri Rousseau')],['Niko Pirosmani','Naïve and decorative',P('Niko Pirosmani')],
+ ['Paul Sérusier','Nabis and flat colour',P('Paul Sérusier')],['Maurice Denis','Nabis and flat colour',P('Maurice Denis')],['Félix Vallotton','Nabis and flat colour',P('Félix Vallotton')],['Paul Gauguin','Nabis and flat colour',P('Paul Gauguin')],
+ ['Raoul Dufy','Joyful colour',P('Raoul Dufy')],['Henri Matisse','Joyful colour',P('Henri Matisse')],['Vincent van Gogh','Joyful colour',P('Vincent van Gogh')],
+ ['Paul Klee','Colourful abstraction',P('Paul Klee')],['Wassily Kandinsky','Colourful abstraction',P('Wassily Kandinsky')],['Hilma af Klint','Colourful abstraction',P('Hilma af Klint')],['Robert Delaunay','Colourful abstraction',P('Robert Delaunay')],
+ ['Sophie Taeuber-Arp','Colourful abstraction',P('Sophie Taeuber-Arp')],['Piet Mondrian','Colourful abstraction',P('Piet Mondrian')],['Lyubov Popova','Colourful abstraction',P('Lyubov Popova')],['El Lissitzky','Colourful abstraction',P('El Lissitzky')],
+ ['Franz Marc','Expressionist colour',P('Franz Marc')],
+ ['Charles Demuth','American modernism',P('Charles Demuth')],['Joseph Stella','American modernism',P('Joseph Stella')],['Marsden Hartley','American modernism',P('Marsden Hartley')],
+ ['Gustav Klimt','Vienna decorative','deepcat:"Landscape paintings by Gustav Klimt" filetype:bitmap'],
+ ['Utagawa Hiroshige','Japanese prints','deepcat:"One Hundred Famous Views of Edo" filetype:bitmap'],['Katsushika Hokusai','Japanese prints','Hokusai "Thirty-six Views" filetype:bitmap'],['Yoshida Hiroshi','Japanese prints','deepcat:"Yoshida Hiroshi" filetype:bitmap'],
+ ['WPA posters','Vintage posters','"WPA poster" filetype:bitmap']
 ];
-const MOVE=Object.fromEntries(ARTISTS);
+const SRC=Object.fromEntries(ARTISTS.map(x=>[x[0],x[2]]));
+const BRIGHT_MIN_S=24,BRIGHT_MIN_L=36;
+const MODERN_MOVES=new Set(['Colourful abstraction','American modernism','Vintage posters','Joyful colour','Expressionist colour']);
+const MOVE=Object.fromEntries(ARTISTS.map(x=>[x[0],x[1]]));
 const SUBJ=[
  ['People',/portrait|woman|women|girl|boy|\bman\b|\bmen\b|lady|ladies|child|family|bather|dancer|figure|people|couple|mother|nude|café|cafe|promenade|lover|femme|fille|homme|enfant|dame|frau|mädchen|madchen|mujer|niñ|kinder|selbstbildnis|autoportrait|odalisque|baigneu|danse|tänzer|circus|cirque|moulin|actress|singer|reading|lecture|\bakt\b|nymph|player|joueur|spieler|musician|bohem|tango|dimanche|sunday|grande jatte|picnic|déjeuner|bal\b|ball\b|party|mädchen|bildnis|retrato|ritratto|tahitian|bather|worker|peasant|paysan|harvest/i],
  ['Landscape',/landscape|paysage|landschaft|seascape|harbou?r|\bport\b|river|forest|mountain|valley|coast|view of|vue de|countryside|field|meadow|hills?\b|lake\b|village/i],
@@ -168,9 +173,10 @@ const JUNK=/detail|signature|frame\b|museum|exhibition|installation|gallery view
 const PEOPLE_PRIOR=0.35;
 
 let S=load()||fresh(true);
-function fresh(fo){return {v:3,ratings:{},items:{},queue:[],seen:{},qinfo:{},adj:{},terms:[],frameOnly:fo}}
+function fresh(fo){return {v:3,ratings:{},items:{},queue:[],seen:{},qinfo:{},adj:{},terms:[],frameOnly:fo,brightOnly:true,modern:true}}
 if(S.v!==3)S=fresh(true);
-let current=null,busy=false,lastRated=null;
+if(!S.r4){S.r4=1;S.brightOnly=true;S.modern=true;S.queue=[];S.qinfo={};S.terms=(S.terms||[]).filter(t=>!/^(bright|modern|vivid|colou?rful)$/i.test(t.q));}
+let current=null,busy=false,lastRated=null,skipped=0;
 S.seenT=S.seenT||{};
 const tkey=a=>(a.artist||'')+'|'+(a.title||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\b(study for|sketch for|\d{4})\b/g,'').trim().slice(0,40);
 function save(){try{localStorage.setItem('artTasteV3',JSON.stringify(S))}catch(e){}}
@@ -231,7 +237,8 @@ function weights(){
 }
 function termScore(a){let s=0;for(const t of S.terms){const words=t.q.toLowerCase().split(/\s+/).filter(x=>x.length>2);
   if(words.length&&words.every(x=>a.text.includes(x)||(a.artist||'').toLowerCase().includes(x)))s+=t.dir>0?1.2:-2}return s}
-function predict(a,w){let s=termScore(a);if((a.subj||[]).includes('People'))s+=PEOPLE_PRIOR;for(const f of features(a))if(w[f])s+=w[f].score;return s}
+function modernScore(a){if(!S.modern)return 0;let s=0;if(MODERN_MOVES.has(a.move))s+=0.5;if(a.year){if(a.year>=1905)s+=0.4;else if(a.year<1890)s-=0.8}return s}
+function predict(a,w){let s=termScore(a)+modernScore(a);if((a.subj||[]).includes('People'))s+=PEOPLE_PRIOR;for(const f of features(a))if(w[f])s+=w[f].score;return s}
 function ratedCount(){return Object.values(S.ratings).filter(r=>r!==0).length}
 function okShape(a){if(!S.frameOnly)return true;const r=a.w/a.h;return r>=1.15&&r<=2.4}
 
@@ -243,12 +250,13 @@ function queryFor(){
     const good=Object.entries(w).filter(([f,v])=>v.score>0.25&&/^(artist|move):/.test(f)).sort((a,b)=>b[1].score-a[1].score).slice(0,6);
     if(good.length){const [f]=pick(good);const k=f.split(':')[0],v=f.slice(k.length+1);
       const artist=k==='artist'?v:pick(ARTISTS.filter(x=>x[1]===v))[0];
-      return {key:'a:'+artist,q:`deepcat:"Paintings by ${artist}" filetype:bitmap`,artist}}
+      if(!SRC[artist])return {key:'a:'+ARTISTS[0][0],q:ARTISTS[0][2],artist:ARTISTS[0][0]};
+      return {key:'a:'+artist,q:SRC[artist],artist}}
   }
   const bad=new Set(Object.entries(weights()).filter(([f,v])=>v.score<-0.4&&/^(artist|move):/.test(f)).map(([f])=>f.slice(f.indexOf(':')+1)));
   const pool=ARTISTS.filter(([a,m])=>!bad.has(a)&&!bad.has(m));
-  const [artist]=pick(pool.length?pool:ARTISTS);
-  return {key:'a:'+artist,q:`deepcat:"Paintings by ${artist}" filetype:bitmap`,artist};
+  const [artist,,q]=pick(pool.length?pool:ARTISTS);
+  return {key:'a:'+artist,q,artist};
 }
 async function fetchQ(qq){
   const info=S.qinfo[qq.key]||{};const limit=30;let off=0;
@@ -300,6 +308,7 @@ async function show(){
   const a=current,img=$('img');
   img.crossOrigin='anonymous';
   img.onload=()=>{if(!a.col){const c=colourOf(img);if(c){a.col=c;if(S.items[a.id])save()}}if(a!==current)return;
+    if(S.brightOnly&&a.col&&(a.col.s<BRIGHT_MIN_S||a.col.l<BRIGHT_MIN_L)){S.seen[a.id]=1;skipped++;current=null;show();return}
     $('msg').style.display='none';$('card').style.display='block';resetCard()};
   img.onerror=()=>{if(img.crossOrigin){img.removeAttribute('crossorigin');img.crossOrigin=null;img.src=a.web+'&nc=1'}else{S.seen[a.id]=1;current=null;show()}};
   img.src=a.web;img.alt=a.title||'';
@@ -312,6 +321,7 @@ async function show(){
   updatePhase();
 }
 function updatePhase(){const n=ratedCount();$('phase').textContent=n<15?`Exploring broadly · ${n}/15 rated`:`Tuning to your taste · ${n} rated`;
+  if(S.brightOnly&&skipped)$('phase').textContent+=` · ${skipped} dull skipped`;
   const f=Object.values(S.ratings).filter(r=>r>0).length;$('favCount').textContent=f?`(${f})`:''}
 
 const WHY_YES=[['Colours',a=>features(a).filter(f=>/^(hue|sat|light|temp):/.test(f))],['People',()=>['subj:People']],['Style',a=>features(a).filter(f=>/^(artist|move):/.test(f))],['Mood',a=>features(a).filter(f=>/^(light|move):/.test(f))]];
@@ -335,6 +345,8 @@ function resetCard(){const c=$('card');c.style.transition='none';c.style.transfo
 function renderTerms(){$('terms').innerHTML=S.terms.map((t,i)=>`<span class="term ${t.dir>0?'more':'less'}" data-i="${i}" title="Tap to remove">${t.dir>0?'+':'−'} ${esc(t.q)} ×</span>`).join('');
   $('terms').querySelectorAll('.term').forEach(e=>e.onclick=()=>{S.terms.splice(+e.dataset.i,1);save();renderTerms();S.queue=[];refill().then(()=>{if(!current)show()})})}
 function addTerm(dir){const q=$('steerIn').value.trim();if(!q){toast('Type something first');return}
+  if(/^(bright|vivid|colou?rful|dull|dark|muted)$/i.test(q)){const on=(dir>0)===/^(bright|vivid|colou?rful)$/i.test(q);S.brightOnly=on;$('brightOnly').checked=on;$('steerIn').value='';save();toast(on?'Bright only: on':'Bright only: off');S.queue=[];refill().then(()=>{if(!current)show()});return}
+  if(/^(modern|new|old|old-fashioned)$/i.test(q)){const on=(dir>0)===/^(modern|new)$/i.test(q);S.modern=on;$('steerIn').value='';save();toast(on?'Favouring more modern work':'Modern boost off');S.queue=[];refill().then(()=>{if(!current)show()});return}
   S.terms=S.terms.filter(t=>t.q.toLowerCase()!==q.toLowerCase());S.terms.push({q,dir});$('steerIn').value='';save();renderTerms();
   S.queue=S.queue.filter(a=>termScore(a)>=0);toast(dir>0?`Showing more “${q}”`:`Showing less “${q}”`);refill().then(()=>{if(!current)show()})}
 $('steerMore').onclick=()=>addTerm(1);$('steerLess').onclick=()=>addTerm(-1);
@@ -351,7 +363,8 @@ stage.addEventListener('pointercancel',()=>{drag=false;resetCard()});
 $('bNo').onclick=()=>rate(-1);$('bYes').onclick=()=>rate(1);$('bLove').onclick=()=>rate(2);$('bSkip').onclick=()=>rate(0);
 document.addEventListener('keydown',e=>{if(!$('swipe').classList.contains('on')||e.target.tagName==='INPUT')return;
   const m={ArrowLeft:-1,ArrowRight:1,ArrowUp:2,ArrowDown:0}[e.key];if(m!==undefined){e.preventDefault();rate(m)}});
-$('frameOnly').checked=S.frameOnly;
+$('frameOnly').checked=S.frameOnly;$('brightOnly').checked=S.brightOnly!==false;
+$('brightOnly').onchange=e=>{S.brightOnly=e.target.checked;save();toast(S.brightOnly?'Skipping dark and muted pictures':'Showing everything')};
 $('frameOnly').onchange=e=>{S.frameOnly=e.target.checked;S.queue=[];save();current=null;show()};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
@@ -393,12 +406,12 @@ $('copyProfile').onclick=async()=>{
   const groups=GROUPS.map(([k])=>[k,Object.entries(w).filter(([f,v])=>f.startsWith(k+':')&&v.n>=2).sort((a,b)=>b[1].score-a[1].score).map(([f,v])=>`${val(f)} (${v.score.toFixed(2)}, n=${v.n})`)]).filter(([,v])=>v.length);
   const fav=Object.entries(S.ratings).filter(([,r])=>r>0).map(([id,r])=>{const a=S.items[id];return `${r===2?'LOVE':'like'}: ${a.title} — ${a.artist||'?'}${a.year?', '+a.year:''} [${(a.subj||[]).join(', ')}]`});
   const nope=Object.entries(S.ratings).filter(([,r])=>r<0).map(([id])=>{const a=S.items[id];return `${a.title} — ${a.artist||'?'} [${(a.subj||[]).join(', ')}]`});
-  const txt=`My art taste profile (swipe tool v3, early modern public domain):\n\n${sentence(w)}\n\nSteer terms: ${S.terms.map(t=>(t.dir>0?'+':'-')+t.q).join(', ')||'none'}\n\nFeature scores (positive = liked):\n${groups.map(([k,v])=>`${k}: ${v.slice(0,8).join('; ')}`).join('\n')}\n\nLiked/loved:\n${fav.join('\n')}\n\nRejected:\n${nope.slice(-40).join('\n')}`;
+  const txt=`My art taste profile (swipe tool v4, flat and graphic):\n\n${sentence(w)}\n\nSteer terms: ${S.terms.map(t=>(t.dir>0?'+':'-')+t.q).join(', ')||'none'}\n\nFeature scores (positive = liked):\n${groups.map(([k,v])=>`${k}: ${v.slice(0,8).join('; ')}`).join('\n')}\n\nLiked/loved:\n${fav.join('\n')}\n\nRejected:\n${nope.slice(-40).join('\n')}`;
   try{await navigator.clipboard.writeText(txt);toast('Profile copied')}catch(e){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Profile copied')}catch(_){toast('Copy failed')}ta.remove()}
 };
 let armed=false;
 $('reset').onclick=()=>{if(!armed){armed=true;$('reset').textContent='Tap again to confirm';setTimeout(()=>{armed=false;$('reset').textContent='Reset everything'},3000);return}
-  S=fresh(S.frameOnly);save();armed=false;lastRated=null;renderWhy();renderTerms();$('reset').textContent='Reset everything';renderTaste();updatePhase();current=null;show();toast('Reset')};
+  S=fresh(S.frameOnly);S.r4=1;skipped=0;save();armed=false;lastRated=null;renderWhy();renderTerms();$('reset').textContent='Reset everything';renderTaste();updatePhase();current=null;show();toast('Reset')};
 function renderFavs(){
   const favs=Object.entries(S.ratings).filter(([,r])=>r>0).sort((a,b)=>b[1]-a[1]).map(([id,r])=>({...S.items[id],r}));
   $('favGrid').innerHTML=favs.length?favs.map(a=>`<div class="fav"><img loading="lazy" src="${esc(a.web)}" alt=""><div class="b">${a.r===2?'<div class="love-badge">★ Loved</div>':''}<div class="t">${esc(a.title)}</div><div class="s">${esc(a.artist||'Unknown')}${a.year?' · '+a.year:''}</div><div class="links"><a href="${esc(a.big)}" target="_blank" rel="noopener">4K image</a><a href="${esc(a.page)}" target="_blank" rel="noopener">Commons page</a></div></div></div>`).join(''):'<p class="muted">Nothing yet. Swipe right on things you like.</p>';
